@@ -1,0 +1,14 @@
+This folder contains genomic reference for scRNA-seq analysis of Halisarca dujardinii.
+
+FASTA reference in composed of:
+21 chromosomes from our own draft assembly ("HiC_scaffold_1" - "HiC_scaffold_21")
+Some scaffolds from this draft assembly were discarded either because it's a contamination of to exclude "broken" gene models:
+22nd scaffold is discarded 'cos it is a bacterial genome.
+23-... scaffolds are debris, they are discarded due to too short.
+Mitochondrial assembly from Genbank (Lavrov et al., 2007) is included - "EU237483.1"
+
+GTF reference is composed of:
+MAKER + PASA (RNA-seq based annotation; transcriptome alignment -> annotation update) + peaks2utr (5'-UTR annotation from scRNA-seq coverage peaks) GTF
+Genbank GFF3 annotation file for mitochondria, downloaded from NCBI.
+MAKER+... file subsetted to have only 1st-21st scaffolds.
+Genbank file converted to GTF with AGAT, prefix "MT-" added to gene_id, ID, transcript_id and Parent features manually (to separate MT seqs for scRNA-seq quality control)
