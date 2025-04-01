@@ -1,0 +1,23 @@
+Files from this directory allow you to reproduce the scRNA-seq analysis of sponge Halisarca dujardinii (from
+"THE DIVERGENT INTRON-CONTAINING ACTIN IN SPONGE MORPHOGENETIC PROCESSES" by Yulia V. Lyupina, Kim I. Adameyko, Vasiliy M. Zubarev et al.)
+
+"Seurat_scGate_analysis.Rmd" takes raw files from CellRanger (see CellRanger_results directory) and yields .H5Seurat and .h5ad objects with clustering and UMAP projections. 
+
+"HDuj_annotated_celltypes_20240523.h5Seurat", "HDuj_reclustered_renumbered_20240522.h5ad" is result of this script, the last can be used with scanpy.
+
+"SAMap.ipynb" takes .h5ad and additional files of Spongilla lacustris and Amphimedon queenslandica to apply SAMap cell type mapping algorithm.
+To obtain files for other sponges, see data availability in articles:
+Musser,J.M., Schippers,K.J., Nickel,M. et al. (2021) Profiling cellular diversity in sponges informs animal cell type and nervous system evolution. Science, 374, 717–723.
+Sebé-Pedrós,A., Chomsky,E., Pang,K. et al. (2018) Early metazoan cell type diversity and the evolution of multicellular gene regulation. Nat. Ecol. Evol., 2, 1176–1188.
+
+"SAMap.ipynb" results in cell type similarity matrices: mapping_table_small_hd_aq.csv; mapping_table_small_hd_sl.csv.
+These similarity matrices can be utilized to make sankey plots with "Sankey.Rmd"
+
+"counts_hd_235r_4seasons_exons_v2.rds" is R dataset which contains read counts of bulk RNA-seq.
+
+"Cell type deconvolution analysis.Rmd" takes both bulk RNA-seq dataset and .h5Seurat object to do cell type deconvolution analysis. 
+It produces file "Deconv_3k_marker_based_predicted_stage_fixed_season_random.tsv" with estimated proportion of cell types in bulk RNA-seq samples.
+For proper work it requires a table with huge set of cell type marker genes as well as some info to interconvert various versions of gene IDs. 
+it is included in files: "markers_top_v20240405.rds"; "Trinotate_annotation_report.xlsx"
+
+Finally, "Actin_paper_figures_20250120.ipynb" allows to reproduce those plots from the article which were created using this data.
