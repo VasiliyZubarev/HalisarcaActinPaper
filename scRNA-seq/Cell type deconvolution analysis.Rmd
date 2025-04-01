@@ -1,0 +1,148 @@
+---
+title: "Cell type deconvolution analysis"
+output: html_document
+date: "2024-04-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+suppressPackageStartupMessages({
+    library(MuSiC)
+    library(SeuratObject)
+    library(Seurat)
+    library(SeuratDisk)
+    library(sp)
+    library(SingleCellExperiment)
+    library(Biobase)
+    library(readxl)
+    library(reshape2)
+    library(dplyr)
+    library(tidyr)
+})
+```
+
+Read Seurat with source scRNA-seq data
+
+
+```{r}
+hd.seurat<-LoadH5Seurat('/tank/projects/Zubarev_sponge/Analysis/2024_05_18_Seurat_clean/HDuj_annotated_celltypes_20240523.h5Seurat')
+```
+
+```{r}
+hd.seurat<-subset(hd.seurat, subset=(scGate_multi != "cluster20")&(scGate_multi != "cluster19")&(scGate_multi != "Multi")&(scGate_multi != "NA"))
+hd.seurat@meta.data$scGate_multi[hd.seurat@meta.data$scGate_multi == 'cluster0']<-'cluster0_2'
+hd.seurat@meta.data$scGate_multi[hd.seurat@meta.data$scGate_multi == 'cluster2']<-'cluster0_2'
+```
+
+```{r}
+hd.sce = as.SingleCellExperiment(hd.seurat)
+```
+
+Read normalized bulk readcounts
+
+```{r}
+hd.bulk <- data.frame(readRDS('/tank/projects/Zubarev_sponge/Analysis/2024_03_28_Celltype_deconvolution/counts_hd_235r_4seasons_exons_v2.rds'))
+```
+
+Read table with top marker genes
+
+```{r}
+hd.markers <- data.frame(readRDS('/tank/projects/Zubarev_sponge/Analysis/2024_03_28_Celltype_deconvolution/markers_top_v20240405.rds'))
+```
+
+Fill in 'nbis-gene-___' IDs in bulk data instead of 'HD-___-RA'  
+
+```{r}
+annot<-data.frame(read_xlsx('/tank/projects/Zubarev_sponge/Analysis/2024_03_28_Celltype_deconvolution/Trinotate_annotation_report.xlsx'))
+```
+
+```{r}
+rownames(annot)<-annot$transcript_id
+mapping<-annot[rownames(hd.bulk),]
+hd.bulk$gene_id<-mapping$gene_id
+hd.bulk<-na.omit(hd.bulk)
+rownames(hd.bulk)<-hd.bulk$gene_id
+hd.bulk<-hd.bulk[,1:43]
+```
+
+```{r}
+hd.bulk.mtx<-as.matrix(hd.bulk)
+```
+
+```{r}
+Est.prop = music_prop(bulk.mtx = hd.bulk.mtx,
+                      sc.sce = hd.sce,
+                      clusters = 'scGate_multi',  # or 'ident' if it represents cell types
+                      samples = 'orig.ident',  # Replace with actual sample identifier column if available
+                      markers = hd.markers$gene,
+                      verbose = TRUE)
+```
+
+```{r}
+music_long<-melt(Est.prop$Est.prop.weighted)
+colnames(music_long)<-c("BulkSample", "SC_Cluster", "value")
+```
+
+```{r}
+write.table(music_long, file = "/tank/projects/Zubarev_sponge/Analysis/2024_05_18_Seurat_clean/Deconv_3k_marker_based_v20240523.tsv", sep = "\t", row.names = FALSE, quote = FALSE)
+```
+
+```{r}
+music_long <- read.table("/tank/projects/Zubarev_sponge/Analysis/2024_05_18_Seurat_clean/Deconv_3k_marker_based_v20240523.tsv", sep = "\t", header = T)
+```
+
+```{r}
+music_long <- music_long %>% separate_wider_delim(BulkSample, ".", names=c("Season", "Stage", "Hours", "Rep"))
+```
+
+```{r}
+library(lme4)
+```
+
+```{r}
+music_lme<-lmer(value ~ 1|SC_Cluster/Stage, music_long)
+```
+
+```{r}
+music_long$predicted1<-predict(music_lme)
+```
+
+This model was included in the draft of the Actin article:
+
+```{r}
+music_lme2<-lmer(value ~ (1|SC_Cluster) + (1|SC_Cluster:Stage) + (1|SC_Cluster:Season), music_long)
+```
+
+```{r}
+summary(music_lme2)
+```
+
+```{r}
+music_long$predicted2<-predict(music_lme2)
+```
+
+Test a model that was suggested by the reviewer of the article:
+
+```{r}
+music_lme3<-lmer(value ~ SC_Cluster:Stage + (1|SC_Cluster:Season), music_long)
+```
+
+```{r}
+music_long$predicted3<-predict(music_lme3)
+```
+
+```{r}
+music_long$predicted3[music_long$predicted3 < 0]<-0
+```
+
+```{r}
+for_picture<-summarise(music_long, Season=Season[1], Stage=Stage[1], SC_Cluster=SC_Cluster[1], predicted3=predicted3[1], .by=c(Season,Stage,SC_Cluster))
+for_picture$Code<-paste0(for_picture$Season,'.',for_picture$Stage)
+```
+
+```{r}
+write.table(music_long, file="/tank/projects/Zubarev_sponge/Analysis/2024_05_18_Seurat_clean/Deconv_3k_marker_based_predicted_stage_fixed_season_random.tsv"
+```
